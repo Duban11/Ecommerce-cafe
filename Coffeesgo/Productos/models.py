@@ -1,30 +1,46 @@
 from django.db import models
+from django.db.models.deletion import CASCADE
 
-# Create your models here.
-class Productos (models.Model):
-    opciones = (
-        ("Café", "C"),
-        ("Artículos", "A")
-    )
-    nombre = models.CharField(max_length=60)
-    precio = models.FloatField()
-    costo = models.FloatField()
-    foto = models.ImageField(blank = True, null=True)
-    categoria = models.CharField(choices=opciones, max_length=20, blank= True, null=True)  #chocices => tener una estructura que contenga diferentes opciones
-    cod_barras = models.CharField(primary_key=True, max_length=100)
-
-    def cambiarPrecio (self,nuevoprecio):
-        self.precio = nuevoprecio
-
-    def cambiarCosto (self,nuevocosto):
-        self.costo = nuevocosto
-
-    def cambiarNombre (self,nuevonombre):
-        self.nombre = nuevonombre
-
-    def cambiarFoto (self,nuevafoto):
-        self.foto = nuevafoto
+class CategoriaProducto(models.Model):
+    nombre = models.CharField(max_length=200)
+    imagen = models.ImageField(null=True, blank=True)
 
     def __str__(self):
-        #Brindar una identificación general en base de datos (sección 'Admin')
+        #indentifar el nombre de nuestros objetos
         return self.nombre
+    @property  #convierte el metodo en atributo
+    def numeroProductos (self):
+        productos = self.producto_set.all()
+        return len(productos)
+
+class Producto(models.Model):
+    nombre = models.CharField(max_length=200)
+    categoria = models.ForeignKey(CategoriaProducto, on_delete=models.CASCADE)
+    precio = models.IntegerField()
+    descripcion = models.TextField(max_length=500, blank=True, null=True )
+    imagen = models.ImageField(blank=True, null=True)
+    calificacion =models.FloatField(default=0)
+
+
+    def __str__(self):
+        return self.nombre
+
+
+    @property
+    def calcularCalificacion(self):
+        comentarios = Comentario.objects.all()
+        calificacion = 0
+        for comentario in comentarios:
+            calificacion += comentario.calificacion
+        return calificacion/len(comentarios)
+        
+
+class Comentario(models.Model):
+    usuario = models.CharField(max_length=200)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    calificacion =models.FloatField()
+    fecha = models.DateField(auto_now_add=True)
+    contenido = models.TextField(max_length=500, blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.usuario + " - " + self.producto.nombre
